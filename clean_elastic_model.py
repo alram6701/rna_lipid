@@ -6,10 +6,10 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
 
 
-X1 = pd.read_csv("/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv", index_col=0)
-X3 = pd.read_csv("newrna_cell_clair_filtered_symbol.csv", index_col=0).T
-Y1 = pd.read_csv("/users/ramkd9/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
-Y3 = pd.read_csv("/users/ramkd9/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
+X1 = pd.read_csv("data/feature_blankreduiction.csv", index_col=0)
+X3 = pd.read_csv("data/newrna_cell_clair_filtered_symbol.csv", index_col=0).T
+Y1 = pd.read_csv("data/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
+Y3 = pd.read_csv("data/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
 
 # Collapse duplicated gene symbols after transpose
 X3 = X3.groupby(X3.columns, axis=1).mean()

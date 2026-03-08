@@ -25,10 +25,10 @@ Y_cols = bundle["Y_columns"]
 # X_cols = bundle["X_columns"]
 # Y_cols = bundle["Y_columns"]
 
-X1 = pd.read_csv("/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv", index_col=0)
-X3 = pd.read_csv("newrna_cell_clair_filtered_symbol.csv", index_col=0).T
-Y1 = pd.read_csv("/users/ramkd9/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
-Y3 = pd.read_csv("/users/ramkd9/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
+X1 = pd.read_csv("data/feature_blankreduiction.csv", index_col=0)
+X3 = pd.read_csv("data/newrna_cell_clair_filtered_symbol.csv", index_col=0).T
+Y1 = pd.read_csv("data/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
+Y3 = pd.read_csv("data/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
 
 # collapse duplicated genes in X3
 X3 = X3.groupby(X3.columns, axis=1).mean()
@@ -67,16 +67,6 @@ print("Y_df shape:", Y_df.shape)
 # sample_series = Y_df.index
 # train_mask = ~sample_series.isin(test_samples)
 # test_mask = sample_series.isin(test_samples)
-
-
-
-X1 = pd.read_csv("/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv", index_col=0)
-
-X3 = pd.read_csv("newrna_cell_clair_filtered_symbol.csv",index_col=0).T
-X3 = X3.groupby(X3.columns, axis=1).mean()
-
-Y1 = pd.read_csv("/users/ramkd9/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
-Y3 = pd.read_csv("/users/ramkd9/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
 
 #Lets exclude 4 patient identifiers from all training sets if the index starts with  "D018","D022","D024","D036" for example "D022_END" and "D022_EPI", "D024_END","D036_MES" 
 
@@ -167,12 +157,12 @@ meta_holdout["CellType"] = meta_holdout.index.str.split("_").str[-1]
 
 #real validationish
 counts = pd.read_csv(
-    "/users/ramkd9/Lipid_Predict/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt",
+    "data/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt",
     sep="\t"
 )
 
 groups = pd.read_csv(
-    "/users/ramkd9/Lipid_Predict/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt",
+    "data/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt",
     sep="\t"
 )
 
