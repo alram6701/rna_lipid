@@ -491,3 +491,98 @@ metrics_compare = pd.DataFrame([
 ])
 
 print(metrics_compare)
+
+
+from upsetplot import UpSet, from_contents
+import matplotlib.pyplot as plt
+
+alpha = 0.05
+
+true_sig = enet_valid_df[enet_valid_df["pval"] < alpha].copy()
+pred_sig = pediatric_enet_valid_df[pediatric_enet_valid_df["pval"] < alpha].copy()
+
+true_sig["Lipid"] = true_sig["Lipid"].astype(str).str.strip()
+pred_sig["Lipid"] = pred_sig["Lipid"].astype(str).str.strip()
+
+comparisons = sorted(set(true_sig["Comparison"]) | set(pred_sig["Comparison"]))
+
+print("Comparisons found:", comparisons)
+
+for comp in comparisons:
+    true_set = set(true_sig.loc[true_sig["Comparison"] == comp, "Lipid"])
+    pred_set = set(pred_sig.loc[pred_sig["Comparison"] == comp, "Lipid"])
+
+    print(f"\n{comp}")
+    print("Holdout ENet:", len(true_set))
+    print("Pediatric ENet:", len(pred_set))
+    print("Overlap:", len(true_set & pred_set))
+
+    if len(true_set) == 0 and len(pred_set) == 0:
+        print("Skipping empty comparison")
+        continue
+
+    sets = {
+        "Holdout_ENet": true_set,
+        "Pediatric_ENet": pred_set
+    }
+
+    upset_data = from_contents(sets)
+
+    plt.figure(figsize=(6, 4))
+    UpSet(
+        upset_data,
+        subset_size="count",
+        show_counts=True
+    ).plot()
+
+    plt.suptitle(f"{comp} differential lipids (p < {alpha})")
+    plt.tight_layout()
+    plt.savefig(f"enet_{comp}_diff_lipids.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+
+
+alpha = 0.05
+
+true_sig = mt_valid_df[mt_valid_df["pval"] < alpha].copy()
+pred_sig = pediatric_mt_valid_df[pediatric_mt_valid_df["pval"] < alpha].copy()
+
+true_sig["Lipid"] = true_sig["Lipid"].astype(str).str.strip()
+pred_sig["Lipid"] = pred_sig["Lipid"].astype(str).str.strip()
+
+comparisons = sorted(set(true_sig["Comparison"]) | set(pred_sig["Comparison"]))
+
+print("Comparisons found:", comparisons)
+
+for comp in comparisons:
+    true_set = set(true_sig.loc[true_sig["Comparison"] == comp, "Lipid"])
+    pred_set = set(pred_sig.loc[pred_sig["Comparison"] == comp, "Lipid"])
+
+    print(f"\n{comp}")
+    print("Holdout ENet:", len(true_set))
+    print("Pediatric ENet:", len(pred_set))
+    print("Overlap:", len(true_set & pred_set))
+
+    if len(true_set) == 0 and len(pred_set) == 0:
+        print("Skipping empty comparison")
+        continue
+
+    sets = {
+        "Holdout_ENet": true_set,
+        "Pediatric_ENet": pred_set
+    }
+
+    upset_data = from_contents(sets)
+
+    plt.figure(figsize=(6, 4))
+    UpSet(
+        upset_data,
+        subset_size="count",
+        show_counts=True
+    ).plot()
+
+    plt.suptitle(f"{comp} differential lipids (p < {alpha})")
+    plt.tight_layout()
+    plt.savefig(f"mt_{comp}_diff_lipids.png", dpi=300, bbox_inches="tight")
+    plt.show()
