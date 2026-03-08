@@ -456,9 +456,6 @@ def save_overlap_barplots(summary_df, outpath):
     plt.close()
 
 
-# =========================
-# MAIN
-# =========================
 def main():
     ensure_outdir(OUTDIR)
 
