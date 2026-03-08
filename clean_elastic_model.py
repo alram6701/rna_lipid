@@ -4,21 +4,24 @@ from sklearn.linear_model import ElasticNet
 from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import MultiTaskElasticNetCV
+from tqdm import tqdm
+import time
 
 
 X1 = pd.read_csv("data/feature_blankreduiction.csv", index_col=0)
 X3 = pd.read_csv("data/newrna_cell_clair_filtered_symbol.csv", index_col=0).T
 Y1 = pd.read_csv("data/Bulk_lipids_cleaned_normalized_median_527.csv", index_col=0)
 Y3 = pd.read_csv("data/cell_lipids_cleaned_norm_median_286.csv", index_col=0)
+X1 = pd.read_csv("/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv", index_col=0)
 
-# Collapse duplicated gene symbols after transpose
-X3 = X3.groupby(X3.columns, axis=1).mean()
+# collapse duplicate gene symbols
+X3 = X3.T.groupby(level=0).mean().T
 
 for df in (X1, X3, Y1, Y3):
     df.index = df.index.astype(str).str.strip()
 
-
-# align RNA and lipid matrices
+# align samples
 X_df = pd.concat([X1, X3], axis=0, join="inner")
 Y_df = pd.concat([Y1, Y3], axis=0, join="inner")
 
@@ -29,27 +32,93 @@ common_idx = X_df.index.intersection(Y_df.index)
 X_df = X_df.loc[common_idx].copy()
 Y_df = Y_df.loc[common_idx].copy()
 
+
+# clean matrices
 X_df = X_df.apply(pd.to_numeric, errors="coerce").fillna(0)
 X_df = X_df.loc[:, (X_df != 0).any(axis=0)]
 
-# Keep only samples with complete lipid measurements
+Y_df = Y_df.apply(pd.to_numeric, errors="coerce")
 Y_df_clean = Y_df.dropna().copy()
 X_df_clean = X_df.loc[Y_df_clean.index].copy()
 
+print("Final X shape:", X_df_clean.shape)
+print("Final Y shape:", Y_df_clean.shape)
 
-#model fitting
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_df_clean)
 
-model = MultiOutputRegressor(
-    ElasticNet(alpha=0.005, l1_ratio=0.7, max_iter=10000)
+# scale X and Y
+
+scaler_x = StandardScaler()
+X_scaled = scaler_x.fit_transform(X_df_clean)
+
+scaler_y = StandardScaler()
+Y_scaled = scaler_y.fit_transform(Y_df_clean)
+
+# fit model
+model = MultiTaskElasticNetCV(
+    l1_ratio=[0.2, 0.5, 0.8],
+    alphas=np.logspace(-3, 0, 10),
+    cv=3,
+    max_iter=30000,
+    n_jobs=-1
 )
-model.fit(X_scaled, Y_df_clean)
+print("Fitting MultiTaskElasticNetCV...")
 
-Y_pred = model.predict(X_scaled)
-pred_df = pd.DataFrame(Y_pred, index=Y_df_clean.index, columns=Y_df_clean.columns)
+t0 = time.time()
+model.fit(X_scaled, Y_scaled)
+print(f"Training finished in {time.time() - t0:.2f} seconds")
 
-#evaluation
+# enet_fs = MultiOutputRegressor(
+#     ElasticNet(alpha=0.005, l1_ratio=0.7, max_iter=10000)
+# )
+
+# enet_fs.fit(X_scaled, Y_df_clean)
+
+# Y_pred = enet_fs.predict(X_scaled)
+
+# predict and inverse transform
+Y_pred_scaled = model.predict(X_scaled)
+Y_pred = scaler_y.inverse_transform(Y_pred_scaled)
+
+pred_df = pd.DataFrame(
+    Y_pred,
+    index=Y_df_clean.index,
+    columns=Y_df_clean.columns
+)
+
+print(pred_df.head())
+
+
+# fast global metrics
+true_vals = Y_df_clean.to_numpy().ravel()
+pred_vals = pred_df.to_numpy().ravel()
+
+safe_true = np.where(true_vals == 0, np.nan, true_vals)
+
+rmse = np.sqrt(np.mean((true_vals - pred_vals) ** 2))
+norm_rmse = rmse / np.mean(true_vals)
+pearson_corr = np.corrcoef(true_vals, pred_vals)[0, 1]
+mape = np.nanmean(np.abs((true_vals - pred_vals) / safe_true))
+
+denom = np.sum((true_vals - np.mean(true_vals)) ** 2)
+nse = 1 - (np.sum((true_vals - pred_vals) ** 2) / denom)
+
+r = pearson_corr
+alpha_kge = np.std(pred_vals) / np.std(true_vals)
+beta_kge = np.mean(pred_vals) / np.mean(true_vals)
+kge = 1 - np.sqrt((1 - r) ** 2 + (1 - alpha_kge) ** 2 + (1 - beta_kge) ** 2)
+
+metrics = {
+    "RMSE": rmse,
+    "Normalized_RMSE": norm_rmse,
+    "Pearson_r": pearson_corr,
+    "MAPE": mape,
+    "NSE": nse,
+    "KGE": kge,
+}
+
+print(metrics)
+
+
 pred_long = (
     pred_df.reset_index(names="sample")
     .melt(id_vars="sample", var_name="Lipid", value_name="Predicted")
@@ -63,8 +132,6 @@ true_long = (
 eval_df = pred_long.merge(true_long, on=["sample", "Lipid"], how="inner")
 eval_df["error"] = eval_df["True"] - eval_df["Predicted"]
 
-
-#sample annotations
 eval_df["Organ"] = np.where(eval_df["sample"].str.startswith("D"), "lung", "serum")
 
 suffix_to_celltype = {
@@ -79,8 +146,6 @@ eval_df["CellType"] = "non_cell_type"
 for suffix, label in suffix_to_celltype.items():
     eval_df.loc[eval_df["sample"].str.endswith(suffix), "CellType"] = label
 
-
-#per-lipid performance
 r2_per_lipid = (
     eval_df.groupby("Lipid")
     .apply(lambda df: r2_score(df["True"], df["Predicted"]))
@@ -88,66 +153,25 @@ r2_per_lipid = (
 )
 
 
-#lipid group cell type presence 
-lipids_by_group = {
-    group: set(sub.loc[sub["True"] > 0, "Lipid"])
-    for group, sub in eval_df.groupby("CellType")
+import pickle
+
+bundle = {
+    "model": model,
+    "scaler_x": scaler_x,
+    "scaler_y": scaler_y,
+    "X_columns": X_df_clean.columns.tolist(),
+    "Y_columns": Y_df_clean.columns.tolist(),
 }
 
-lipids_lung = set(
-    eval_df.loc[(eval_df["Organ"] == "lung") & (eval_df["True"] > 0), "Lipid"]
-)
-
-groups_for_intersection = ["EPI", "MES", "END", "MIC", "PMX"]
-lipid_sets = [lipids_by_group[g] for g in groups_for_intersection if g in lipids_by_group]
-lipid_sets.append(lipids_lung)
-
-lipids_all_groups = set.intersection(*lipid_sets) if lipid_sets else set()
-
-print(f"Number of shared lipids in lung: {len(lipids_lung)}")
-print(f"Number of lipids present in all selected groups: {len(lipids_all_groups)}")
-
-pred_df_both_organs = eval_df[eval_df["Lipid"].isin(lipids_lung)].copy()
-pred_df_all_organs = eval_df[eval_df["Lipid"].isin(lipids_all_groups)].copy()
-
-#metrics
-true_vals = eval_df["True"].to_numpy()
-pred_vals = eval_df["Predicted"].to_numpy()
-
-safe_true = np.where(true_vals == 0, np.nan, true_vals)
-
-rmse = np.sqrt(np.mean((true_vals - pred_vals) ** 2))
-norm_rmse = rmse / np.mean(true_vals)
-pearson_corr = np.corrcoef(true_vals, pred_vals)[0, 1]
-mape = np.nanmean(np.abs((true_vals - pred_vals) / safe_true))
-nse = 1 - (
-    np.sum((true_vals - pred_vals) ** 2) /
-    np.sum((true_vals - np.mean(true_vals)) ** 2)
-)
-
-r = pearson_corr
-alpha = np.std(pred_vals) / np.std(true_vals)
-beta = np.mean(pred_vals) / np.mean(true_vals)
-kge = 1 - np.sqrt((1 - r) ** 2 + (1 - alpha) ** 2 + (1 - beta) ** 2)
-
-metrics = {
-    "RMSE": rmse,
-    "Normalized_RMSE": norm_rmse,
-    "Pearson_r": pearson_corr,
-    "MAPE": mape,
-    "NSE": nse,
-    "KGE": kge,
-}
-
-print(metrics)
+with open("otherelastic_multitask_try.pkl", "wb") as f:
+    pickle.dump(bundle, f)
 
 
-import warnings
-from sklearn.exceptions import ConvergenceWarning
-
-with warnings.catch_warnings(record=True) as w:
-    warnings.simplefilter("always", ConvergenceWarning)
-    model.fit(X_scaled, Y_df_clean)
-
-n_conv = sum(issubclass(wi.category, ConvergenceWarning) for wi in w)
-print("Convergence warnings:", n_conv)
+# bundle = {
+#     "scaler": scaler,
+#     "enet_fs": enet_fs,
+#     "X_columns": X_df_clean.columns.tolist(),
+#     "Y_columns": Y_df_clean.columns.tolist(),
+# }   
+# with open("elasticnet_model.pkl", "wb") as f:
+#     pickle.dump(bundle, f)
