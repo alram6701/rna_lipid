@@ -1,0 +1,190 @@
+D175__airway smooth muscle	airway smooth muscle
+D032__airway smooth muscle	airway smooth muscle
+D046__airway smooth muscle	airway smooth muscle
+D062__airway smooth muscle	airway smooth muscle
+D088__airway smooth muscle	airway smooth muscle
+D139__airway smooth muscle	airway smooth muscle
+D150__airway smooth muscle	airway smooth muscle
+D032__Alveolar macrophages	Alveolar macrophages
+D046__Alveolar macrophages	Alveolar macrophages
+D062__Alveolar macrophages	Alveolar macrophages
+D088__Alveolar macrophages	Alveolar macrophages
+D139__Alveolar macrophages	Alveolar macrophages
+D150__Alveolar macrophages	Alveolar macrophages
+D032__alveolar type 1 cells	alveolar type 1 cells
+D139__alveolar type 1 cells	alveolar type 1 cells
+D150__alveolar type 1 cells	alveolar type 1 cells
+D046__alveolar type 1 cells	alveolar type 1 cells
+D062__alveolar type 1 cells	alveolar type 1 cells
+D088__alveolar type 1 cells	alveolar type 1 cells
+D032__alveolar type 2 cells	alveolar type 2 cells
+D046__alveolar type 2 cells	alveolar type 2 cells
+D062__alveolar type 2 cells	alveolar type 2 cells
+D139__alveolar type 2 cells	alveolar type 2 cells
+D150__alveolar type 2 cells	alveolar type 2 cells
+D088__alveolar type 2 cells	alveolar type 2 cells
+D032__arteries	arteries
+D046__arteries	arteries
+D062__arteries	arteries
+D088__arteries	arteries
+D139__arteries	arteries
+D150__arteries	arteries
+D032__AT1/AT2-like	AT1/AT2-like
+D046__AT1/AT2-like	AT1/AT2-like
+D139__AT1/AT2-like	AT1/AT2-like
+D088__AT1/AT2-like	AT1/AT2-like
+D150__AT1/AT2-like	AT1/AT2-like
+D062__AT1/AT2-like	AT1/AT2-like
+D032__AT2/Club-like	AT2/Club-like
+D046__AT2/Club-like	AT2/Club-like
+D139__AT2/Club-like	AT2/Club-like
+D062__AT2/Club-like	AT2/Club-like
+D088__AT2/Club-like	AT2/Club-like
+D150__AT2/Club-like	AT2/Club-like
+D032__B cells	B cells
+D046__B cells	B cells
+D062__B cells	B cells
+D088__B cells	B cells
+D139__B cells	B cells
+D150__B cells	B cells
+D032__basal cells	basal cells
+D046__basal cells	basal cells
+D062__basal cells	basal cells
+D139__basal cells	basal cells
+D150__basal cells	basal cells
+D088__basal cells	basal cells
+D032__bronchial vessel	bronchial vessel
+D046__bronchial vessel	bronchial vessel
+D088__bronchial vessel	bronchial vessel
+D139__bronchial vessel	bronchial vessel
+D150__bronchial vessel	bronchial vessel
+D032__Cap1	Cap1
+D046__Cap1	Cap1
+D062__Cap1	Cap1
+D088__Cap1	Cap1
+D139__Cap1	Cap1
+D150__Cap1	Cap1
+D032__Cap2	Cap2
+D046__Cap2	Cap2
+D062__Cap2	Cap2
+D088__Cap2	Cap2
+D150__Cap2	Cap2
+D139__Cap2	Cap2
+D032__chondrocytes	chondrocytes
+D046__chondrocytes	chondrocytes
+D062__chondrocytes	chondrocytes
+D139__chondrocytes	chondrocytes
+D150__chondrocytes	chondrocytes
+D088__chondrocytes	chondrocytes
+D046__ciliated cells	ciliated cells
+D032__ciliated cells	ciliated cells
+D062__ciliated cells	ciliated cells
+D088__ciliated cells	ciliated cells
+D139__ciliated cells	ciliated cells
+D150__ciliated cells	ciliated cells
+D032__club cells	club cells
+D046__club cells	club cells
+D062__club cells	club cells
+D088__club cells	club cells
+D139__club cells	club cells
+D150__club cells	club cells
+D032__dendritic cells	dendritic cells
+D046__dendritic cells	dendritic cells
+D062__dendritic cells	dendritic cells
+D088__dendritic cells	dendritic cells
+D139__dendritic cells	dendritic cells
+D150__dendritic cells	dendritic cells
+D139__enucleated erythrocytes	enucleated erythrocytes
+D032__enucleated erythrocytes	enucleated erythrocytes
+D046__enucleated erythrocytes	enucleated erythrocytes
+D088__enucleated erythrocytes	enucleated erythrocytes
+D062__enucleated erythrocytes	enucleated erythrocytes
+D150__enucleated erythrocytes	enucleated erythrocytes
+D032__goblet cells	goblet cells
+D046__goblet cells	goblet cells
+D139__goblet cells	goblet cells
+D150__goblet cells	goblet cells
+D032__Interstitial macrophages	Interstitial macrophages
+D046__Interstitial macrophages	Interstitial macrophages
+D139__Interstitial macrophages	Interstitial macrophages
+D150__Interstitial macrophages	Interstitial macrophages
+D062__Interstitial macrophages	Interstitial macrophages
+D088__Interstitial macrophages	Interstitial macrophages
+D032__lymphatics	lymphatics
+D062__lymphatics	lymphatics
+D150__lymphatics	lymphatics
+D046__lymphatics	lymphatics
+D088__lymphatics	lymphatics
+D139__lymphatics	lymphatics
+D032__mast cells	mast cells
+D046__mast cells	mast cells
+D062__mast cells	mast cells
+D088__mast cells	mast cells
+D139__mast cells	mast cells
+D150__mast cells	mast cells
+D032__matrix fibroblast 1	matrix fibroblast 1
+D062__matrix fibroblast 1	matrix fibroblast 1
+D088__matrix fibroblast 1	matrix fibroblast 1
+D150__matrix fibroblast 1	matrix fibroblast 1
+D046__matrix fibroblast 1	matrix fibroblast 1
+D139__matrix fibroblast 1	matrix fibroblast 1
+D032__matrix fibroblast 2	matrix fibroblast 2
+D062__matrix fibroblast 2	matrix fibroblast 2
+D150__matrix fibroblast 2	matrix fibroblast 2
+D046__matrix fibroblast 2	matrix fibroblast 2
+D139__matrix fibroblast 2	matrix fibroblast 2
+D088__matrix fibroblast 2	matrix fibroblast 2
+D032__monocytes	monocytes
+D046__monocytes	monocytes
+D062__monocytes	monocytes
+D139__monocytes	monocytes
+D088__monocytes	monocytes
+D150__monocytes	monocytes
+D046__myofibroblasts	myofibroblasts
+D062__myofibroblasts	myofibroblasts
+D032__myofibroblasts	myofibroblasts
+D150__myofibroblasts	myofibroblasts
+D088__myofibroblasts	myofibroblasts
+D139__myofibroblasts	myofibroblasts
+D032__NK cells	NK cells
+D046__NK cells	NK cells
+D088__NK cells	NK cells
+D139__NK cells	NK cells
+D150__NK cells	NK cells
+D062__NK cells	NK cells
+D032__pericytes	pericytes
+D046__pericytes	pericytes
+D062__pericytes	pericytes
+D088__pericytes	pericytes
+D150__pericytes	pericytes
+D139__pericytes	pericytes
+D032__PNECs	PNECs
+D062__PNECs	PNECs
+D139__PNECs	PNECs
+D046__PNECs	PNECs
+D088__PNECs	PNECs
+D150__PNECs	PNECs
+D032__T cells	T cells
+D046__T cells	T cells
+D062__T cells	T cells
+D088__T cells	T cells
+D139__T cells	T cells
+D150__T cells	T cells
+D062__unclassified	unclassified
+D032__unclassified	unclassified
+D046__unclassified	unclassified
+D139__unclassified	unclassified
+D150__unclassified	unclassified
+D088__unclassified	unclassified
+D046__vascular smooth muscle	vascular smooth muscle
+D032__vascular smooth muscle	vascular smooth muscle
+D062__vascular smooth muscle	vascular smooth muscle
+D088__vascular smooth muscle	vascular smooth muscle
+D150__vascular smooth muscle	vascular smooth muscle
+D139__vascular smooth muscle	vascular smooth muscle
+D032__veins	veins
+D046__veins	veins
+D062__veins	veins
+D088__veins	veins
+D139__veins	veins
+D150__veins	veins
