@@ -25,13 +25,6 @@ CELL_LIPID_PATH = ("data/cell_lipids_cleaned_norm_median_286.csv")
 PED_COUNTS_PATH =("data/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt")
 PED_GROUPS_PATH = ("data/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt")
 
-INTERNAL_RNA_PATH = "/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv"
-CELL_RNA_PATH = "/users/ramkd9/Lipid_Predict/newrna_cell_clair_filtered_symbol.csv"
-INTERNAL_LIPID_PATH = "/users/ramkd9/Bulk_lipids_cleaned_normalized_median_527.csv"
-CELL_LIPID_PATH = "/users/ramkd9/cell_lipids_cleaned_norm_median_286.csv"
-
-PED_COUNTS_PATH = "/users/ramkd9/Lipid_Predict/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt"
-PED_GROUPS_PATH = "/users/ramkd9/Lipid_Predict/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt"
 
 # Holdout sample IDs for internal truth set
 # HOLDOUT_SAMPLES = {
