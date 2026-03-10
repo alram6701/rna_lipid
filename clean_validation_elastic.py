@@ -508,14 +508,12 @@ def compute_pred_subtype_de(pred_df, meta_df, coarse1, coarse2, min_reps=3, pseu
     out = pd.concat(results, ignore_index=True)
     return out, subtypes1, subtypes2
 
-def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir, alpha=0.05, top_n_pairs_for_upset=5):
+def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir, alpha=0.05):
     if summary_df.empty or len(true_set) == 0:
         print(f"No subtype UpSet data for {true_comp}")
         return
 
     lipid_sets = {f"True_{true_comp}": true_set}
-
-    pred_top_pairs = summary_df.head(top_n_pairs_for_upset)["Pred_Comparison"]
 
     for comp in pred_top_pairs:
         pred_set = set(
@@ -555,7 +553,7 @@ def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir,
 
     up.plot()
     plt.suptitle(
-        f"Overall UpSet (FDR < {alpha}): True {true_comp} vs top {top_n_pairs_for_upset} subtype pairs"
+        f"Overall UpSet (FDR < {alpha}): True {true_comp}"
     )
     plt.savefig(
         os.path.join(outdir, f"subtype_upset_fdr_{true_comp}.png"),
@@ -624,7 +622,6 @@ def run_subtype_pair_analysis(
     outdir,
     alpha=0.05,
     min_reps_per_subtype=3,
-    top_n_pairs_for_upset=5
 ):
     subtype_summary_tables = {}
     subtype_pred_tables = {}
@@ -684,7 +681,6 @@ def run_subtype_pair_analysis(
             true_comp=true_comp,
             outdir=outdir,
             alpha=alpha,
-            top_n_pairs_for_upset=top_n_pairs_for_upset
         )
 
     return subtype_summary_tables, subtype_pred_tables
@@ -817,7 +813,6 @@ def main():
         outdir=OUTDIR,
         alpha=ALPHA,
         min_reps_per_subtype=3,
-        top_n_pairs_for_upset=5
     )
 
     print(f"\nDone. Outputs saved in: {OUTDIR}")
@@ -825,9 +820,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> fdd12be (add subtype logic)
