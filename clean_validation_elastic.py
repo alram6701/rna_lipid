@@ -515,7 +515,7 @@ def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir,
 
     lipid_sets = {f"True_{true_comp}": true_set}
 
-    for comp in pred_top_pairs:
+    for comp in sorted(pred_subtype_df["Comparison"].unique()):
         pred_set = set(
             pred_subtype_df.loc[
                 (pred_subtype_df["Comparison"] == comp) &
