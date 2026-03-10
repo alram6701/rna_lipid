@@ -508,14 +508,40 @@ def compute_pred_subtype_de(pred_df, meta_df, coarse1, coarse2, min_reps=3, pseu
     out = pd.concat(results, ignore_index=True)
     return out, subtypes1, subtypes2
 
-def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir, alpha=0.05):
+def save_subtype_upset(
+    pred_subtype_df,
+    summary_df,
+    true_set,
+    true_comp,
+    outdir,
+    alpha=0.05,
+    top_n_pairs_for_upset=None,
+    min_sig_lipids=1
+):
+    """
+    If top_n_pairs_for_upset is None:
+        include all subtype comparisons with >= min_sig_lipids significant lipids.
+    If top_n_pairs_for_upset is an int:
+        include only the top N subtype comparisons ranked in summary_df.
+    """
     if summary_df.empty or len(true_set) == 0:
         print(f"No subtype UpSet data for {true_comp}")
         return
 
-    lipid_sets = {f"True_{true_comp}": true_set}
+    lipid_sets = {f"True_{true_comp}": set(map(str, true_set))}
 
-    for comp in sorted(pred_subtype_df["Comparison"].unique()):
+    if top_n_pairs_for_upset is None:
+        comps_to_use = sorted(pred_subtype_df["Comparison"].dropna().unique())
+        suffix = "all_pairs"
+    else:
+        comps_to_use = (
+            summary_df.head(top_n_pairs_for_upset)["Pred_Comparison"]
+            .dropna()
+            .tolist()
+        )
+        suffix = f"top_{top_n_pairs_for_upset}_pairs"
+
+    for comp in comps_to_use:
         pred_set = set(
             pred_subtype_df.loc[
                 (pred_subtype_df["Comparison"] == comp) &
@@ -523,13 +549,17 @@ def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir,
                 "Lipid"
             ].astype(str).str.strip()
         )
-        lipid_sets[f"Pred_{comp}"] = pred_set
 
-    if not lipid_sets:
+        if len(pred_set) >= min_sig_lipids:
+            lipid_sets[f"Pred_{comp}"] = pred_set
+
+    if len(lipid_sets) <= 1:
+        print(f"Not enough subtype lipid sets for {true_comp}")
         return
 
     all_lipids = sorted(set().union(*lipid_sets.values()))
     if len(all_lipids) == 0:
+        print(f"No lipids found for subtype UpSet {true_comp}")
         return
 
     membership = pd.DataFrame(
@@ -552,16 +582,22 @@ def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir,
     )
 
     up.plot()
-    plt.suptitle(
-        f"Overall UpSet (FDR < {alpha}): True {true_comp}"
-    )
+
+    if top_n_pairs_for_upset is None:
+        plt.suptitle(
+            f"Subtype UpSet (FDR < {alpha}): True {true_comp} vs all subtype pairs"
+        )
+    else:
+        plt.suptitle(
+            f"Subtype UpSet (FDR < {alpha}): True {true_comp} vs top {top_n_pairs_for_upset} subtype pairs"
+        )
+
     plt.savefig(
-        os.path.join(outdir, f"subtype_upset_fdr_{true_comp}.png"),
+        os.path.join(outdir, f"subtype_upset_{suffix}_{true_comp}.png"),
         dpi=300,
         bbox_inches="tight"
     )
     plt.close()
-
 def summarize_subtype_overlap(true_valid_df, pred_subtype_df, true_comp, alpha=0.05):
     # true significant set for one coarse comparison
     true_set = set(
@@ -613,7 +649,6 @@ def summarize_subtype_overlap(true_valid_df, pred_subtype_df, true_comp, alpha=0
     )
 
     return summary_df, true_set
-
 def run_subtype_pair_analysis(
     true_valid_df,
     pred_df,
@@ -622,6 +657,9 @@ def run_subtype_pair_analysis(
     outdir,
     alpha=0.05,
     min_reps_per_subtype=3,
+    top_n_pairs_for_upset=5,
+    save_all_pairs_upset=True,
+    save_top_n_pairs_upset=True
 ):
     subtype_summary_tables = {}
     subtype_pred_tables = {}
@@ -673,15 +711,29 @@ def run_subtype_pair_analysis(
 
         print(summary_df.head(10))
 
-        # save_subtype_overlap_heatmap(summary_df, true_comp, outdir)
-        save_subtype_upset(
-            pred_subtype_df=pred_subtype_df,
-            summary_df=summary_df,
-            true_set=true_set,
-            true_comp=true_comp,
-            outdir=outdir,
-            alpha=alpha,
-        )
+        if save_all_pairs_upset:
+            save_subtype_upset(
+                pred_subtype_df=pred_subtype_df,
+                summary_df=summary_df,
+                true_set=true_set,
+                true_comp=true_comp,
+                outdir=outdir,
+                alpha=alpha,
+                top_n_pairs_for_upset=None,
+                min_sig_lipids=1
+            )
+
+        if save_top_n_pairs_upset:
+            save_subtype_upset(
+                pred_subtype_df=pred_subtype_df,
+                summary_df=summary_df,
+                true_set=true_set,
+                true_comp=true_comp,
+                outdir=outdir,
+                alpha=alpha,
+                top_n_pairs_for_upset=top_n_pairs_for_upset,
+                min_sig_lipids=1
+            )
 
     return subtype_summary_tables, subtype_pred_tables
 
@@ -813,6 +865,9 @@ def main():
         outdir=OUTDIR,
         alpha=ALPHA,
         min_reps_per_subtype=3,
+        top_n_pairs_for_upset=5,
+        save_all_pairs_upset=True,
+        save_top_n_pairs_upset=True
     )
 
     print(f"\nDone. Outputs saved in: {OUTDIR}")
