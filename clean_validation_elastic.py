@@ -9,10 +9,13 @@ import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind
 from statsmodels.stats.multitest import multipletests
 from upsetplot import UpSet, from_contents
+from itertools import combinations, product
+from upsetplot import UpSet, from_contents, from_indicators
+
 
 
 MODEL_PATH = "elastic_multitask_try.pkl"
-#MODEL_PATH = "ElasticNet_model.pkl"
+# MODEL_PATH = "ElasticNet_model.pkl"
 
 OUTDIR = "results_lipid_validation"
 
@@ -25,6 +28,14 @@ CELL_LIPID_PATH = ("data/cell_lipids_cleaned_norm_median_286.csv")
 PED_COUNTS_PATH =("data/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt")
 PED_GROUPS_PATH = ("data/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt")
 
+
+INTERNAL_RNA_PATH = "/users/ramkd9/Lipid_Predict/feature_blankreduiction.csv"
+CELL_RNA_PATH = "/users/ramkd9/Lipid_Predict/newrna_cell_clair_filtered_symbol.csv"
+INTERNAL_LIPID_PATH = "/users/ramkd9/Bulk_lipids_cleaned_normalized_median_527.csv"
+CELL_LIPID_PATH = "/users/ramkd9/cell_lipids_cleaned_norm_median_286.csv"
+
+PED_COUNTS_PATH = "/users/ramkd9/Lipid_Predict/exp.GSE161382_counts_matrix_CPTT-sample-revised-gene-pediatric.txt"
+PED_GROUPS_PATH = "/users/ramkd9/Lipid_Predict/groups.GSE161382_counts_matrix_CPTT-sample-revised-prediatric.txt"
 
 # Holdout sample IDs for internal truth set
 # HOLDOUT_SAMPLES = {
@@ -155,12 +166,17 @@ def predict_lipids(model, scaler_x, x_df, x_cols, y_cols):
     return pred_df
 
 
+# def build_internal_metadata(index):
+#     meta = pd.DataFrame(index=index.copy())
+#     meta["Organ"] = meta.index.str.split("_").str[0]
+#     meta["CellType"] = meta.index.str.split("_").str[-1]
+#     return meta
 def build_internal_metadata(index):
     meta = pd.DataFrame(index=index.copy())
     meta["Organ"] = meta.index.str.split("_").str[0]
-    meta["CellType"] = meta.index.str.split("_").str[-1]
+    meta["CellType_raw"] = meta.index.str.split("_").str[-1]
+    meta["CellType"] = meta["CellType_raw"]
     return meta
-
 
 def map_to_coarse(ct):
     ct = str(ct).lower()
@@ -316,34 +332,6 @@ def build_valid_df(df, metadata, group_col="CellType", top_n=202, pairs=None):
     return pd.concat(valid_list, ignore_index=True)
 
 
-def make_logfc_heatmap(valid_df, title, outname):
-    if valid_df.empty:
-        print(f"No data for heatmap: {title}")
-        return
-
-    heat_df = valid_df.pivot_table(
-        index="Lipid",
-        columns="Comparison",
-        values="log2FC",
-        aggfunc="mean"
-    )
-
-    if heat_df.empty:
-        print(f"Heatmap pivot empty: {title}")
-        return
-
-    fig_h = max(8, min(24, 0.18 * heat_df.shape[0]))
-    fig_w = max(10, min(18, 1.2 * heat_df.shape[1]))
-
-    plt.figure(figsize=(fig_w, fig_h))
-    plt.imshow(heat_df.values, aspect="auto")
-    plt.colorbar(label="log2FC")
-    plt.xticks(range(len(heat_df.columns)), heat_df.columns, rotation=45, ha="right")
-    plt.yticks(range(len(heat_df.index)), heat_df.index)
-    plt.title(title)
-    plt.tight_layout()
-    plt.savefig(outname, dpi=300, bbox_inches="tight")
-    plt.close()
 
 
 def build_combined_source_df(true_valid_df, pediatric_pred_valid_df):
@@ -388,7 +376,7 @@ def save_per_comparison_upsets(combined_df, comparisons, alpha, outdir):
             show_counts=True
         ).plot()
 
-        plt.suptitle(f"{comp} significant differential lipids (p < {alpha})")
+        plt.suptitle(f"mt{comp} significant differential lipids (p < {alpha})")
         plt.tight_layout()
         plt.savefig(os.path.join(outdir, f"upset_{comp}.png"), dpi=300, bbox_inches="tight")
         plt.close()
@@ -454,7 +442,252 @@ def save_overlap_barplots(summary_df, outpath):
     plt.tight_layout()
     plt.savefig(outpath, dpi=300, bbox_inches="tight")
     plt.close()
+def compute_pred_subtype_de(pred_df, meta_df, coarse1, coarse2, min_reps=3, pseudocount=1e-9):
+    common_idx = pred_df.index.intersection(meta_df.index)
+    pred_df = pred_df.loc[common_idx].copy()
+    meta_df = meta_df.loc[common_idx].copy()
 
+    counts = meta_df["CellType_raw"].value_counts()
+    valid_subtypes = counts[counts >= min_reps].index
+
+    subtypes1 = (
+        meta_df.loc[meta_df["CellType"] == coarse1, "CellType_raw"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
+    subtypes2 = (
+        meta_df.loc[meta_df["CellType"] == coarse2, "CellType_raw"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
+
+    subtypes1 = [s for s in subtypes1 if s in valid_subtypes]
+    subtypes2 = [s for s in subtypes2 if s in valid_subtypes]
+
+    results = []
+
+    for s1, s2 in product(subtypes1, subtypes2):
+        idx1 = meta_df["CellType_raw"] == s1
+        idx2 = meta_df["CellType_raw"] == s2
+
+        if idx1.sum() < min_reps or idx2.sum() < min_reps:
+            continue
+
+        pair_rows = []
+
+        for lipid in pred_df.columns:
+            x1 = pd.to_numeric(pred_df.loc[idx1, lipid], errors="coerce").dropna()
+            x2 = pd.to_numeric(pred_df.loc[idx2, lipid], errors="coerce").dropna()
+
+            if len(x1) < min_reps or len(x2) < min_reps:
+                continue
+
+            stat, p = ttest_ind(x1, x2, equal_var=False)
+            logfc = np.log2((x2.mean() + pseudocount) / (x1.mean() + pseudocount))
+
+            pair_rows.append({
+                "Comparison": f"{s1}_vs_{s2}",
+                "Subtype1": s1,
+                "Subtype2": s2,
+                "Lipid": lipid,
+                "log2FC": logfc,
+                "t_stat": stat,
+                "pval": p
+            })
+
+        pair_df = pd.DataFrame(pair_rows)
+        if not pair_df.empty:
+            pair_df["FDR"] = multipletests(pair_df["pval"].values, method="fdr_bh")[1]
+            results.append(pair_df)
+
+    if len(results) == 0:
+        return pd.DataFrame(), subtypes1, subtypes2
+
+    out = pd.concat(results, ignore_index=True)
+    return out, subtypes1, subtypes2
+
+def save_subtype_upset(pred_subtype_df, summary_df, true_set, true_comp, outdir, alpha=0.05, top_n_pairs_for_upset=5):
+    if summary_df.empty or len(true_set) == 0:
+        print(f"No subtype UpSet data for {true_comp}")
+        return
+
+    lipid_sets = {f"True_{true_comp}": true_set}
+
+    pred_top_pairs = summary_df.head(top_n_pairs_for_upset)["Pred_Comparison"]
+
+    for comp in pred_top_pairs:
+        pred_set = set(
+            pred_subtype_df.loc[
+                (pred_subtype_df["Comparison"] == comp) &
+                (pred_subtype_df["FDR"] < alpha),
+                "Lipid"
+            ].astype(str).str.strip()
+        )
+        lipid_sets[f"Pred_{comp}"] = pred_set
+
+    if not lipid_sets:
+        return
+
+    all_lipids = sorted(set().union(*lipid_sets.values()))
+    if len(all_lipids) == 0:
+        return
+
+    membership = pd.DataFrame(
+        {
+            name: [lipid in s for lipid in all_lipids]
+            for name, s in lipid_sets.items()
+        },
+        index=all_lipids
+    ).astype(bool)
+
+    upset_data = from_indicators(membership.columns, membership)
+
+    up = UpSet(
+        upset_data,
+        subset_size="count",
+        show_counts=True,
+        sort_by="cardinality",
+        sort_categories_by=None,
+        min_subset_size=1
+    )
+
+    up.plot()
+    plt.suptitle(
+        f"Overall UpSet (FDR < {alpha}): True {true_comp} vs top {top_n_pairs_for_upset} subtype pairs"
+    )
+    plt.savefig(
+        os.path.join(outdir, f"subtype_upset_fdr_{true_comp}.png"),
+        dpi=300,
+        bbox_inches="tight"
+    )
+    plt.close()
+
+def summarize_subtype_overlap(true_valid_df, pred_subtype_df, true_comp, alpha=0.05):
+    # true significant set for one coarse comparison
+    true_set = set(
+        true_valid_df.loc[
+            (true_valid_df["Comparison"] == true_comp) &
+            (true_valid_df["FDR"] < alpha),
+            "Lipid"
+        ].astype(str).str.strip()
+    )
+
+    if len(true_set) == 0:
+        return pd.DataFrame(columns=[
+            "True_Comparison", "Pred_Comparison",
+            "True_only", "Pred_only", "Both",
+            "True_total", "Pred_total", "Jaccard"
+        ]), true_set
+
+    summary = []
+
+    for comp in sorted(pred_subtype_df["Comparison"].dropna().unique()):
+        sub = pred_subtype_df.loc[pred_subtype_df["Comparison"] == comp].copy()
+
+        pred_set = set(
+            sub.loc[sub["FDR"] < alpha, "Lipid"]
+            .astype(str)
+            .str.strip()
+        )
+
+        both = true_set & pred_set
+        true_only = true_set - pred_set
+        pred_only = pred_set - true_set
+        union_n = len(true_set | pred_set)
+
+        summary.append({
+            "True_Comparison": true_comp,
+            "Pred_Comparison": comp,
+            "True_only": len(true_only),
+            "Pred_only": len(pred_only),
+            "Both": len(both),
+            "True_total": len(true_set),
+            "Pred_total": len(pred_set),
+            "Jaccard": (len(both) / union_n) if union_n > 0 else 0.0
+        })
+
+    summary_df = (
+        pd.DataFrame(summary)
+        .sort_values(["Jaccard", "Both", "Pred_total"], ascending=[False, False, False])
+        .reset_index(drop=True)
+    )
+
+    return summary_df, true_set
+
+def run_subtype_pair_analysis(
+    true_valid_df,
+    pred_df,
+    meta_df,
+    comparisons,
+    outdir,
+    alpha=0.05,
+    min_reps_per_subtype=3,
+    top_n_pairs_for_upset=5
+):
+    subtype_summary_tables = {}
+    subtype_pred_tables = {}
+
+    for true_comp in comparisons:
+        print(f"\n{'='*80}")
+        print(f"Processing subtype analysis for {true_comp}")
+        print(f"{'='*80}")
+
+        g1, g2 = true_comp.split("_vs_")
+
+        pred_subtype_df, subtypes1, subtypes2 = compute_pred_subtype_de(
+            pred_df=pred_df,
+            meta_df=meta_df,
+            coarse1=g1,
+            coarse2=g2,
+            min_reps=min_reps_per_subtype
+        )
+
+        print(f"{g1} subtypes retained: {subtypes1}")
+        print(f"{g2} subtypes retained: {subtypes2}")
+
+        if pred_subtype_df.empty:
+            print(f"Skipping {true_comp}: no subtype comparisons with enough replicates")
+            continue
+
+        summary_df, true_set = summarize_subtype_overlap(
+            true_valid_df=true_valid_df,
+            pred_subtype_df=pred_subtype_df,
+            true_comp=true_comp,
+            alpha=alpha
+        )
+
+        if summary_df.empty:
+            print(f"Skipping {true_comp}: no overlap summary generated")
+            continue
+
+        subtype_pred_tables[true_comp] = pred_subtype_df.copy()
+        subtype_summary_tables[true_comp] = summary_df.copy()
+
+        pred_subtype_df.to_csv(
+            os.path.join(outdir, f"pred_subtype_de_{true_comp}.csv"),
+            index=False
+        )
+        summary_df.to_csv(
+            os.path.join(outdir, f"subtype_overlap_summary_{true_comp}.csv"),
+            index=False
+        )
+
+        print(summary_df.head(10))
+
+        # save_subtype_overlap_heatmap(summary_df, true_comp, outdir)
+        save_subtype_upset(
+            pred_subtype_df=pred_subtype_df,
+            summary_df=summary_df,
+            true_set=true_set,
+            true_comp=true_comp,
+            outdir=outdir,
+            alpha=alpha,
+            top_n_pairs_for_upset=top_n_pairs_for_upset
+        )
+
+    return subtype_summary_tables, subtype_pred_tables
 
 def main():
     ensure_outdir(OUTDIR)
@@ -467,22 +700,22 @@ def main():
     print("Internal X shape:", x_df.shape)
     print("Internal Y shape:", y_df.shape)
 
-    print("Preparing internal holdout...")
-    x_holdout, y_holdout = split_internal_holdout(x_df, y_df, HOLDOUT_SAMPLES)
-    print("Internal holdout X shape:", x_holdout.shape)
-    print("Internal holdout Y shape:", y_holdout.shape)
+    # print("Preparing internal holdout...")
+    # x_holdout, y_holdout = split_internal_holdout(x_df, y_df) #HOLDOUT_SAMPLES)
+    # print("Internal holdout X shape:", x_holdout.shape)
+    # print("Internal holdout Y shape:", y_holdout.shape)
 
     print("Predicting internal holdout lipids...")
-    pred_holdout_df = predict_lipids(model, scaler_x, x_holdout, x_cols, y_cols)
+    # pred_holdout_df = predict_lipids(model, scaler_x, x_holdout, x_cols, y_cols)
 
-    common_lipids = y_holdout.columns.intersection(pred_holdout_df.columns)
-    y_holdout_aligned = y_holdout.loc[pred_holdout_df.index, common_lipids].copy()
+    # common_lipids = y_holdout.columns.intersection(pred_holdout_df.columns)
+    # y_holdout_aligned = y_holdout.loc[pred_holdout_df.index, common_lipids].copy()
 
-    nan_counts = y_holdout_aligned.isna().sum()
-    keep_cols = nan_counts[nan_counts <= 16].index
-    y_holdout_aligned = y_holdout_aligned[keep_cols].fillna(0)
+    # nan_counts = y_holdout_aligned.isna().sum()
+    # keep_cols = nan_counts[nan_counts <= 16].index
+    # y_holdout_aligned = y_holdout_aligned[keep_cols].fillna(0)
 
-    meta_holdout = build_internal_metadata(y_holdout_aligned.index)
+    # meta_holdout = build_internal_metadata(y_holdout_aligned.index)
 
     print("Loading pediatric pseudobulk data...")
     pediatric_x = load_pediatric_pseudobulk()
@@ -502,14 +735,29 @@ def main():
     print(meta_pediatric5["CellType"].value_counts(dropna=False))
 
     print("Computing pairwise stats: internal truth...")
+    # true_valid_df = build_valid_df(
+    #     df=y_holdout_aligned,
+    #     metadata=meta_holdout,
+    #     group_col="CellType",
+    #     top_n=TOP_N,
+    #     pairs=CELLTYPE_PAIRS
+    # )
+
+    meta_full = build_internal_metadata(y_df.index)
     true_valid_df = build_valid_df(
-        df=y_holdout_aligned,
-        metadata=meta_holdout,
+        df=y_df,
+        metadata=meta_full,
         group_col="CellType",
         top_n=TOP_N,
         pairs=CELLTYPE_PAIRS
     )
 
+    print("true_full_valid_df:", true_valid_df.shape)
+
+    true_valid_df.to_csv(
+        os.path.join(OUTDIR, "true_valid_df.csv"),
+        index=False
+    )
     print("Computing pairwise stats: pediatric external prediction...")
     pediatric_pred_valid_df = build_valid_df(
         df=pediatric_pred5,
@@ -525,19 +773,6 @@ def main():
     true_valid_df.to_csv(os.path.join(OUTDIR, "true_valid_df.csv"), index=False)
     pediatric_pred_valid_df.to_csv(os.path.join(OUTDIR, "pediatric_pred_valid_df.csv"), index=False)
 
-    print("Saving heatmaps...")
-    make_logfc_heatmap(
-        true_valid_df,
-        title="True lipid log2FC across cell-type comparisons",
-        outname=os.path.join(OUTDIR, "true_lipid_heatmap.png")
-    )
-
-    make_logfc_heatmap(
-        pediatric_pred_valid_df,
-        title="Pediatric predicted lipid log2FC across cell-type comparisons",
-        outname=os.path.join(OUTDIR, "pediatric_pred_lipid_heatmap.png")
-    )
-
     combined_df = build_combined_source_df(true_valid_df, pediatric_pred_valid_df)
     combined_df.to_csv(os.path.join(OUTDIR, "combined_true_pediatric_pred_valid_df.csv"), index=False)
 
@@ -552,6 +787,7 @@ def main():
     )
 
     print("Saving overlap summary...")
+
     summary_df = summarize_overlap(
         combined_df=combined_df,
         comparisons=comparisons,
@@ -565,8 +801,33 @@ def main():
         os.path.join(OUTDIR, "significant_lipid_overlap_by_pair.png")
     )
 
+    print("Running subtype-pair overlap analysis...")
+    subtype_summary_tables, subtype_pred_tables = run_subtype_pair_analysis(
+        true_valid_df=true_valid_df,
+        pred_df=pediatric_pred5,
+        meta_df=meta_pediatric5,
+        comparisons=[
+            "END_vs_EPI",
+            "END_vs_MES",
+            "END_vs_MIC",
+            "EPI_vs_MES",
+            "EPI_vs_MIC",
+            "MES_vs_MIC"
+        ],
+        outdir=OUTDIR,
+        alpha=ALPHA,
+        min_reps_per_subtype=3,
+        top_n_pairs_for_upset=5
+    )
+
     print(f"\nDone. Outputs saved in: {OUTDIR}")
 
 
 if __name__ == "__main__":
     main()
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> fdd12be (add subtype logic)
