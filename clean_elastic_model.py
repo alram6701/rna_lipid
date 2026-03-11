@@ -162,7 +162,7 @@ bundle = {
     "Y_columns": Y_df_clean.columns.tolist(),
 }
 
-with open("otherelastic_multitask_try.pkl", "wb") as f:
+with open("elastic_multitask_try.pkl", "wb") as f:
     pickle.dump(bundle, f)
 
 
